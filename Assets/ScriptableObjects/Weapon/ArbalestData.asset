@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c9c0d9de67eb1d4082839a7204493c4, type: 3}
+  m_Name: ArbalestData
+  m_EditorClassIdentifier: 
+  weaponSprite: {fileID: 21300000, guid: 304d5538541a3c84d992c8f38b1bd9dc, type: 3}
+  bulletData: {fileID: 11400000, guid: 8738f189c048ba2468e7543b5a839379, type: 2}
+  attackPower: 5
+  attackSpeed: 10
+  attackDistance: 5
+  weaponType: 1
+  damageType: 0
+  chargeTime: 0
+  penertrationForce: 100
