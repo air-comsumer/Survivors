@@ -6,5 +6,5 @@ using UnityEngine;
 public struct BulletCreateInfo : IBufferElementData
 {
     public float3 position; 
-    public Quaternion rotation; 
+    public Quaternion rotation;
 }

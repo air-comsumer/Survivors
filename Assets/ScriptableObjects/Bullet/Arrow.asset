@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42138fc2af99511429fb7db5bef1e19f, type: 3}
   m_Name: Arrow
   m_EditorClassIdentifier: 
-  bulletSprite: {fileID: 0}
-  bulletSpeed: 0
+  bulletSprite: {fileID: 21300000, guid: 235490015ed62924d89d4e2ede4c2719, type: 3}
+  bulletSpeed: 1

@@ -1,11 +1,9 @@
-using System.Collections;
-using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Entities;
 using Unity.Transforms;
-using UnityEngine;
-using UnityEngine.UIElements;
+using Unity.Physics;
+using Unity.Mathematics;
 
 public partial struct BulletSystem : ISystem
 {
@@ -20,6 +18,15 @@ public partial struct BulletSystem : ISystem
         EntityCommandBuffer.ParallelWriter ecb = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         DynamicBuffer<BulletCreateInfo> bulletCreateInfoBuffer = SystemAPI.GetSingletonBuffer<BulletCreateInfo>();
         createBulletCount.Data = bulletCreateInfoBuffer.Length;
+        new BulletJob()
+        {
+            enemyLayerMask = 1 << 3,
+            ecb = ecb,
+            deltaTime = SystemAPI.Time.DeltaTime,
+            bulletCreateInfoBuffer = bulletCreateInfoBuffer,
+            collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld,
+        }.ScheduleParallel();
+        state.CompleteDependency();
         if (createBulletCount.Data > 0)
         {
             NativeArray<Entity> newBullets = new NativeArray<Entity>(createBulletCount.Data, Allocator.Temp);
@@ -36,6 +43,44 @@ public partial struct BulletSystem : ISystem
             }
             newBullets.Dispose();
         }
+        
         bulletCreateInfoBuffer.Clear();
+    }
+    [WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)]//忽略组件的启用状态
+    [BurstCompile]
+    public partial struct BulletJob : IJobEntity
+    {
+        public EntityCommandBuffer.ParallelWriter ecb;
+        public uint enemyLayerMask;
+        public float deltaTime;
+        [ReadOnly] public DynamicBuffer<BulletCreateInfo> bulletCreateInfoBuffer;
+        [ReadOnly] public CollisionWorld collisionWorld;
+        public void Execute(EnabledRefRW<BulletData> bulletEnableState, EnabledRefRW<RenderSortTag> sortEnableState,
+            in BulletSharedData bulletSharedData,ref LocalTransform localTransform,ref BulletData bulletData)
+        {
+            if(bulletEnableState.ValueRO == false)
+            {//子弹未激活
+                if(BulletSystem.createBulletCount.Data > 0)
+                {
+                    int index = createBulletCount.Data -= 1;
+                    bulletEnableState.ValueRW = true;//激活子弹
+                    localTransform.Position = bulletCreateInfoBuffer[index].position;
+                    localTransform.Rotation = bulletCreateInfoBuffer[index].rotation;
+                    localTransform.Scale = 1;
+                    bulletData.destroyTime = bulletSharedData.destroyTime;
+                }
+                return;
+            }
+            localTransform.Position += bulletSharedData.moveSpeed * deltaTime*(localTransform.Right()+localTransform.Up());
+            //销毁计算
+            bulletData.destroyTime -= deltaTime;
+            if(bulletData.destroyTime <= 0)
+            {
+                bulletEnableState.ValueRW = false;
+                sortEnableState.ValueRW = false;
+                localTransform.Scale = 0;
+                return;
+            }
+        }
     }
 }
