@@ -6,16 +6,18 @@ using UnityEngine;
 public class BulletAuthoring : MonoBehaviour
 {
     public float moveSpeed;
+    public float attackPower;
     public float destroyTime;
     public class BulletBaker : Baker<BulletAuthoring>
     {
         public override void Bake(BulletAuthoring authoring)
         {
             var entity = GetEntity(TransformUsageFlags.Dynamic);
-            AddComponent<RenderSortTag>(entity); //Ìí¼ÓäÖÈ¾ÅÅÐò±êÇ©
-            SetComponentEnabled<RenderSortTag>(entity, true); //ÆôÓÃäÖÈ¾ÅÅÐò±êÇ©
+            AddComponent<RenderSortTag>(entity); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½Ç©
+            SetComponentEnabled<RenderSortTag>(entity, true); //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¾ï¿½ï¿½ï¿½ï¿½ï¿½Ç©
             AddComponent<BulletData>(entity, new BulletData()
             {
+                attackPower = authoring.attackPower,
                 destroyTime = authoring.destroyTime
             });
             SetComponentEnabled<BulletData>(entity, true);
@@ -24,8 +26,8 @@ public class BulletAuthoring : MonoBehaviour
             {
                 moveSpeed = authoring.moveSpeed,
                 destroyTime = authoring.destroyTime,
-                colliderOffset = authoring.GetComponent<BoxCollider2D>().offset,//Åö×²ÌåÆ«ÒÆ
-                colliderHalfExtents = new Unity.Mathematics.float3(collidersize.x,collidersize.y,10000)//Åö×²Ìå´óÐ¡
+                colliderOffset = authoring.GetComponent<BoxCollider2D>().offset,//ï¿½ï¿½×²ï¿½ï¿½Æ«ï¿½ï¿½
+                colliderHalfExtents = new Unity.Mathematics.float3(collidersize.x,collidersize.y,10000)//ï¿½ï¿½×²ï¿½ï¿½ï¿½Ð¡
             });
         }
     }

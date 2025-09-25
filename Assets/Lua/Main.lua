@@ -1,0 +1,11 @@
+print("准备就绪")
+require("InitClass")
+require("ItemData")
+require("BasePanel")
+require("MainPanel")
+MainPanel:ShowMe("MainPanel")
+require("ItemWeapon")
+require("ShopPanel")
+ShowShopPanel =function()
+    ShopPanel:ShowMe()
+end

@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
+using Unity.Physics;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -19,55 +21,88 @@ public class Player : Character
             return instance;
         }
     }
-    [SerializeField] Slider hpSlider;//ÉúÃüÖµ»¬¶¯Ìõ
-    [SerializeField] ParticleSystem bleeding;//Á÷ÑªÌØÐ§
-    [SerializeField] GameObject GameOverWindow;//ÓÎÏ·½áÊø´°¿Ú
+    [SerializeField] Slider hpSlider;//ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    [SerializeField] ParticleSystem bleeding;//ï¿½ï¿½Ñªï¿½ï¿½Ð§
+    [SerializeField] GameObject GameOverWindow;//ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     float attackSpeed;
     float expAdditional;
     int luck;
     bool isColliding;
-    [SerializeField] float detectionRadius = 5f; // µÐÈË¼ì²â°ë¾¶
-    [SerializeField] Collider2D[] colliders; // ÓÃÓÚ´æ´¢¼ì²âµ½µÄµÐÈË
-    [SerializeField] int weaponCount = 1; // ÎäÆ÷ÊýÁ¿,ÓÃÀ´¿ØÖÆÃ¿´Î¼ì²âµÐÈËµÄÊýÁ¿
+    [SerializeField] float detectionRadius = 5f; // ï¿½ï¿½ï¿½Ë¼ï¿½ï¿½ë¾¶
+    [SerializeField] UnityEngine.Collider[] colliders = new UnityEngine.Collider[10]; // ï¿½ï¿½ï¿½Ú´æ´¢ï¿½ï¿½âµ½ï¿½Äµï¿½ï¿½ï¿½
+    [SerializeField] int weaponCount = 1; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½,ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½Î¼ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½
+    [Header("ï¿½ï¿½ï¿½ï¿½ï¿½×²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½")]
+    public Vector3 detectionSize = new Vector3(5f, 5f, 0.1f);
+    public float spawnInterval;
+    public int spawnCount;
     private Player() { }
     void Awake()
     {
         Initialize();
+        //ï¿½ï¿½ï¿½ï¿½ï¿½Ê±Ð´Ò»Ð©ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½Ä´ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½ï¿½ï¿½×ªï¿½Æµï¿½ÏµÍ³ï¿½ï¿½Ð´
+        SharedData.gameSharedInfo.Data.spawnInterval = spawnInterval; // ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¼ï¿½ï¿½
+        SharedData.gameSharedInfo.Data.spawnCount = spawnCount; // ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Éµï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½
+        SharedData.playerColliderInfo.Data.detectionSize = detectionSize;
+        var enemyLayer = LayerMask.NameToLayer("Enemy");
+        var enemyLayerMask = (uint)math.pow(2, enemyLayer);
+        var attackCollisionFiltter = new CollisionFilter
+        {
+            BelongsTo = uint.MaxValue,
+            CollidesWith = enemyLayerMask
+        };
+        SharedData.playerColliderInfo.Data.collisionFilter = attackCollisionFiltter;
+    }
+    private void Start()
+    {
+        WeaponLayout.Instance.ResetWeaponLayout();
     }
     private void Update()
     {
-        EnemyDetection();
+        SharedData.gameSharedInfo.Data.spawnCount = spawnCount;
+        SharedData.playerColliderInfo.Data.detectionSize = detectionSize;
+        //EnemyDetection();
     }
     public void EnemyDetection()
     {
-        colliders = Physics2D.OverlapCircleAll(transform.position, detectionRadius,1<<3);
+        //Physics.OverlapSphereNonAlloc(transform.position, detectionRadius,colliders,1 << 3);
+        //colliders = Physics.OverlapCircleAll(transform.position, detectionRadius,1<<3);
+        Debug.Log(colliders.Length);
+        for(int i = 0; i < colliders.Length; i++)
+        {
+            //if (colliders[i] == null || colliders[i].gameObject == null)
+            //{
+            //    continue; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½×²ï¿½ï¿½
+            //}
+            Debug.Log(colliders[i].transform.position);
+            //Debug.Log("ï¿½ï¿½âµ½ï¿½ï¿½ï¿½ï¿½: " + colliders[i].gameObject.name);
+        }
+ 
         if (colliders.Length > 0)
         {
-            Debug.Log(colliders[0].gameObject.GetComponent<Character>().GetHealthPoint());
             int[] a = new int[1];
-            a[0] = 0;
-            // ´¥·¢¹¥»÷ÊÂ¼þ,¼àÌýÔÚWeaponÀàÖÐ
-            EventCenter.Instance.EventTrigger<Collider2D[], int[]>("WeaponAttack", colliders,a);
+            a[0] = 0;//Îªï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø£ï¿½ï¿½ï¿½ÎªÐ´ï¿½Ãµï¿½EventTriggerÃ»ï¿½ï¿½ï¿½Ü¹ï¿½Ê¹ï¿½ï¿½refï¿½ï¿½ï¿½ï¿½Õ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ intï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý£ï¿½ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½Â¼ï¿½Ö´ï¿½Ðµï¿½Ê±ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½Öµ
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½,ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Weaponï¿½ï¿½ï¿½ï¿½
+            //EventCenter.Instance.EventTrigger<Collider[], int[]>("WeaponAttack", colliders,a);
         }
     }
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, detectionRadius);
+        Gizmos.DrawWireCube(this.transform.position, detectionSize*2);  // ç»˜åˆ¶ç«‹æ–¹ä½“
         Gizmos.color = Color.green;
-        Gizmos.DrawLine(transform.position,new Vector3(transform.position.x,transform.position.y,transform.position.z+10));
+        Gizmos.DrawLine(transform.position,Vector3.forward);
     }
     protected override void Initialize()
     {
-        colliders = new Collider2D[weaponCount];//µÚÒ»´Î³õÊ¼»¯£¬ºóÃæ¿ÉÒÔÔÚÎäÆ÷Ôö¼ÓµÄÊ±ºòÔÙÐÞ¸Ä
+        colliders = new UnityEngine.Collider[weaponCount];//ï¿½ï¿½Ò»ï¿½Î³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½
         base.Initialize();
         //GameOverWindow.SetActive(false);
         instance = this;
         attackSpeed = 100f;
         expAdditional = 100f;
         luck = 0;
-        hpSlider.maxValue = GetHealthPoint();
-        hpSlider.value = GetHealthPoint();
+        //hpSlider.maxValue = GetHealthPoint();
+        //hpSlider.value = GetHealthPoint();
         isColliding = false;
         GetFirstWeapon();
     }
@@ -112,7 +147,7 @@ public class Player : Character
         GetAnimator().SetBool("Death", true);
         yield return new WaitForSeconds(1f);
         GameOverWindow.SetActive(true);
-        Time.timeScale = 0f; // Í£Ö¹ÓÎÏ·Ê±¼ä
+        Time.timeScale = 0f; // Í£Ö¹ï¿½ï¿½Ï·Ê±ï¿½ï¿½
     }
     public override void ReduceHealthPoint(int damage)
     {
@@ -142,7 +177,7 @@ public class Player : Character
         switch(GetComponentInParent<Player>().GetCharacterType())
         {
             case CharacterType.Knight:
-                //Ìí¼ÓÎäÆ÷
+                //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
                 break;
             case CharacterType.Bandit:
                 break;

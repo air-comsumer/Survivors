@@ -1,27 +1,91 @@
+using NUnit.Framework;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Entities;
 using Unity.Entities.UniversalDelegates;
 using UnityEngine;
-
+using XLua;
 public class WeaponLayout : MonoBehaviour
 {
-    public float radius = 0.2f; // ÎäÆ÷²¼¾ÖµÄ°ë¾¶
-    [ContextMenu("ResetWeaponLayout")]
-    private void ResetWeaponLayout()
+    private static WeaponLayout instance;
+    public static WeaponLayout Instance
     {
-        // ÖØÖÃÎäÆ÷²¼¾Ö
-        Debug.Log(transform.childCount);
+        get
+        {
+            if (instance == null)
+            {
+                instance = FindObjectOfType<WeaponLayout>();
+            }
+            return instance;
+        }
+    }
+    void OnEnable()
+    {
+        EventCenter.Instance.AddListener("ResetLayout", ResetWeaponLayout);
+    }
+    void OnDisable()
+    {
+        EventCenter.Instance.RemoveListener("ResetLayout", ResetWeaponLayout);
+    }
+    public float radius = 0.2f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÖµÄ°ë¾¶
+    public List<Weapon> weapons; // ï¿½ï¿½ï¿½ï¿½ï¿½Ğ±ï¿½
+    public float health = 100; //ï¿½ï¿½Ç°Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+
+    public void ResetWeaponLayout()
+    {
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        weapons.Clear();
         int weaponIndex = 0;
-        float angleStep = 360f / transform.childCount; // Ã¿¸öÎäÆ÷Ö®¼äµÄ½Ç¶È¼ä¸ô
-        float startAngle = angleStep/2; // ÆğÊ¼½Ç¶È
+        float angleStep = 360f / transform.childCount; // Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½Ä½Ç¶È¼ï¿½ï¿½
+        float startAngle = angleStep/2; // ï¿½ï¿½Ê¼ï¿½Ç¶ï¿½
         foreach (Transform child in transform)
         {
             float currentAngle = (startAngle + weaponIndex * angleStep)*Mathf.Deg2Rad;
             float x = radius * Mathf.Sin(currentAngle);
             float y = radius * Mathf.Cos(currentAngle);
-            Debug.Log(currentAngle+" "+x+" "+y);
             weaponIndex++;
             child.position = new Vector3(transform.position.x + x,transform.position.y-y,transform.position.z);
+            weapons.Add(child.GetComponent<Weapon>());
         }
     }
+    public void AddWeapon() //GameDataCenterä¸­ç”¨å­—å…¸å­˜å‚¨åå­—ä¸ºé”®
+    {
+        Debug.Log("æ·»åŠ æ­¦å™¨");
+        EventCenter.Instance.EventTrigger("AddWeapon");
+        EventCenter.Instance.EventTrigger("ResetLayout");
+    }
+
+    private void Update()
+    {
+        //Attack();
+    }
+    // private void Attack()
+    // {
+    //     DynamicBuffer<WeaponTargetBuffer> buffer = World.DefaultGameObjectInjectionWorld.EntityManager.GetBuffer<WeaponTargetBuffer>(SharedData.singtonEntity2.Data);
+    //     int targetIndex = 0; // Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    //     if(buffer.Length == 0) return; // ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ä¿ï¿½ê£¬Ö±ï¿½Ó·ï¿½ï¿½ï¿½
+    //     foreach (var weapon in weapons)
+    //     {
+    //         if(weapon.isAttack) continue; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    //         var direction = (Vector3)buffer[targetIndex].position - weapon.transform.position; // ï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ê·½ï¿½ï¿½
+    //         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 45; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½Ç¶ï¿½
+    //         weapon.transform.rotation = Quaternion.AngleAxis(angle + 180, Vector3.forward);
+    //         if(health <= weapon.weaponData.AttackPower)
+    //         {
+    //             weapon.isAttack = true; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½×´Ì¬
+    //             weapon.GenerateBullet(angle); // ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½
+    //             targetIndex++;
+    //             health = 100;
+    //         }
+    //         else
+    //         {
+    //             weapon.isAttack = true; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½×´Ì¬
+    //             health -= weapon.weaponData.AttackPower;
+    //             weapon.GenerateBullet(angle); // ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½
+    //         }
+    //     }
+    //     buffer.Clear(); // ï¿½ï¿½ï¿½Ä¿ï¿½ê»ºï¿½ï¿½ï¿½ï¿½
+    // }
+
 }

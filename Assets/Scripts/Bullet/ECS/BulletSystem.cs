@@ -4,6 +4,9 @@ using Unity.Entities;
 using Unity.Transforms;
 using Unity.Physics;
 using Unity.Mathematics;
+using System.Diagnostics;
+using Unity.VisualScripting;
+using System.Linq;
 
 public partial struct BulletSystem : ISystem
 {
@@ -15,7 +18,7 @@ public partial struct BulletSystem : ISystem
     }
     public void OnUpdate(ref SystemState state)
     {
-        EntityCommandBuffer.ParallelWriter ecb = SystemAPI.GetSingleton<BeginInitializationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
+        EntityCommandBuffer.ParallelWriter ecb = SystemAPI.GetSingleton<EndSimulationEntityCommandBufferSystem.Singleton>().CreateCommandBuffer(state.WorldUnmanaged).AsParallelWriter();
         DynamicBuffer<BulletCreateInfo> bulletCreateInfoBuffer = SystemAPI.GetSingletonBuffer<BulletCreateInfo>();
         createBulletCount.Data = bulletCreateInfoBuffer.Length;
         new BulletJob()
@@ -25,6 +28,7 @@ public partial struct BulletSystem : ISystem
             deltaTime = SystemAPI.Time.DeltaTime,
             bulletCreateInfoBuffer = bulletCreateInfoBuffer,
             collisionWorld = SystemAPI.GetSingleton<PhysicsWorldSingleton>().CollisionWorld,
+            enemyDataLookup = SystemAPI.GetComponentLookup<EnemyData>()
         }.ScheduleParallel();
         state.CompleteDependency();
         if (createBulletCount.Data > 0)
@@ -44,9 +48,9 @@ public partial struct BulletSystem : ISystem
             newBullets.Dispose();
         }
         
-        bulletCreateInfoBuffer.Clear();
+        bulletCreateInfoBuffer.Clear();//è¿™é‡Œä¼šæ¸…ç©ºç¼“å†²åŒº
     }
-    [WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)]//ºöÂÔ×é¼þµÄÆôÓÃ×´Ì¬
+    [WithOptions(EntityQueryOptions.IgnoreComponentEnabledState)]//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Ì¬
     [BurstCompile]
     public partial struct BulletJob : IJobEntity
     {
@@ -55,15 +59,17 @@ public partial struct BulletSystem : ISystem
         public float deltaTime;
         [ReadOnly] public DynamicBuffer<BulletCreateInfo> bulletCreateInfoBuffer;
         [ReadOnly] public CollisionWorld collisionWorld;
+
+        [ReadOnly] public ComponentLookup<EnemyData> enemyDataLookup;
         public void Execute(EnabledRefRW<BulletData> bulletEnableState, EnabledRefRW<RenderSortTag> sortEnableState,
-            in BulletSharedData bulletSharedData,ref LocalTransform localTransform,ref BulletData bulletData)
+            in BulletSharedData bulletSharedData, ref LocalTransform localTransform, ref BulletData bulletData)
         {
-            if(bulletEnableState.ValueRO == false)
-            {//×Óµ¯Î´¼¤»î
-                if(BulletSystem.createBulletCount.Data > 0)
+            if (bulletEnableState.ValueRO == false)
+            {//ï¿½Óµï¿½Î´ï¿½ï¿½ï¿½ï¿½
+                if (BulletSystem.createBulletCount.Data > 0)
                 {
                     int index = createBulletCount.Data -= 1;
-                    bulletEnableState.ValueRW = true;//¼¤»î×Óµ¯
+                    bulletEnableState.ValueRW = true;//ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½
                     localTransform.Position = bulletCreateInfoBuffer[index].position;
                     localTransform.Rotation = bulletCreateInfoBuffer[index].rotation;
                     localTransform.Scale = 1;
@@ -71,16 +77,54 @@ public partial struct BulletSystem : ISystem
                 }
                 return;
             }
-            localTransform.Position += bulletSharedData.moveSpeed * deltaTime*(localTransform.Right()+localTransform.Up());
-            //Ïú»Ù¼ÆËã
+            localTransform.Position += bulletSharedData.moveSpeed * deltaTime * (localTransform.Right() + localTransform.Up());
+            //ï¿½ï¿½ï¿½Ù¼ï¿½ï¿½ï¿½
             bulletData.destroyTime -= deltaTime;
-            if(bulletData.destroyTime <= 0)
+            if (bulletData.destroyTime <= 0)
             {
                 bulletEnableState.ValueRW = false;
                 sortEnableState.ValueRW = false;
                 localTransform.Scale = 0;
                 return;
             }
+            //ï¿½ï¿½×²ï¿½ï¿½ï¿½
+            NativeList<DistanceHit> hits = new NativeList<DistanceHit>(Allocator.Temp);
+            CollisionFilter filter = new CollisionFilter()
+            {
+                BelongsTo = ~0u, // ï¿½Óµï¿½ï¿½ï¿½ï¿½ÚµÄ²ï¿½
+                CollidesWith = enemyLayerMask, // ï¿½Óµï¿½ï¿½ï¿½ï¿½ï¿½Ë²ï¿½ï¿½ï¿½×²
+                GroupIndex = 0 // ï¿½ï¿½×²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+            };
+            if (collisionWorld.OverlapBox(localTransform.Position, localTransform.Rotation, bulletSharedData.colliderHalfExtents, ref hits, filter))
+            {
+                for (int i = 0; i < hits.Length; i++)
+                {
+                    Entity temp = hits[i].Entity;
+                    var enemyData = enemyDataLookup.GetRefRO(temp);
+                    float health = enemyData.ValueRO.health- bulletData.attackPower;
+                    bulletData.destroyTime = 0;
+                    if (health <= 0)
+                    {
+                        SharedData.gameScore.Data++;
+                        ecb.SetComponent<EnemyData>(i, temp, new EnemyData()
+                        {
+                            health = health,
+                            die = true
+                        });
+
+                    }
+                    else
+                    {
+                        ecb.SetComponent<EnemyData>(i, temp, new EnemyData()
+                        {
+                            health = health,
+                            die = false
+                        });
+                    }
+
+                }
+            }
+            hits.Dispose();
         }
     }
 }

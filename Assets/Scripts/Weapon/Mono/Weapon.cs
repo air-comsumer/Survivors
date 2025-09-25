@@ -1,74 +1,97 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Entities;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class Weapon : MonoBehaviour
 {
-    [SerializeField] private WeaponDataSO weaponData;
-    private bool isHaveTarget = false; // ÊÇ·ñÓĞÄ¿±ê
-    private bool isAttack = false; // ÊÇ·ñÕıÔÚ¹¥»÷
-    private float attackTimer = 0f; // ¹¥»÷¼ÆÊ±Æ÷
-    public Transform target;
+    [SerializeField] public WeaponDataSO weaponData;
+    public bool isHaveTarget = false; // ï¿½Ç·ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½
+    public bool isCold = false; //å¼€å§‹æ²¡æœ‰åœ¨å†·å´
+    private float attackTimer = 0f; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
+    DynamicBuffer<WeaponTargetBuffer> buffer;
+    private Vector3 tempVector;
     private void OnEnable()
     {
-        attackTimer = weaponData.AttackSpeed; // ³õÊ¼»¯¹¥»÷¼ÆÊ±Æ÷
-        EventCenter.Instance.AddListener<Collider2D[], int[]>("WeaponAttack", Attack);
+        attackTimer = weaponData.AttackSpeed; //åˆå§‹åŒ–å†·å´å€’è®¡æ—¶
+        //EventCenter.Instance.AddListener<Collider[], int[]>("WeaponAttack", Attack);//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ğ´ï¿½ï¿½ï¿½
+    }
+    private void Start()
+    {
+        
     }
     private void Update()
     {
-        if(isAttack)
+        
+        if(isCold)
         {
-            if(attackTimer>0)
+            if(attackTimer>0)//å€’è®¡æ—¶æ²¡ç»“æŸ
             {
-                attackTimer -= Time.deltaTime; // ¼õÉÙ¹¥»÷¼ÆÊ±Æ÷
+                attackTimer -= Time.deltaTime;//å€’è®¡æ—¶
             }
             else
             {
-                isAttack = false; // ¹¥»÷½áÊø
-                attackTimer = weaponData.AttackSpeed; // ÖØÖÃ¹¥»÷¼ÆÊ±Æ÷
+                Debug.Log("å†·å´ç»“æŸ");
+                isCold = false; //å†·å´ç»“æŸ
+                attackTimer = weaponData.AttackSpeed; //é‡ç½®å€’è®¡æ—¶æ—¶é—´
             }
         }
     }
-    public void Attack(Collider2D[] colliders,int[] targetIndex)
+    private void LateUpdate()
     {
-        //Ğı×ª½Ç¶È
-        if(isAttack) return; // Èç¹ûÕıÔÚ¹¥»÷£¬Ö±½Ó·µ»Ø
-        if (targetIndex[0]<colliders.Length) isHaveTarget = true;
-        else isHaveTarget = false;
-        if (!isHaveTarget) return; // Èç¹ûÃ»ÓĞÄ¿±ê£¬Ö±½Ó·µ»Ø
-        //ÎäÆ÷Ğı×ª·½Ïò
-        var direction = colliders[targetIndex[0]].transform.position - transform.position;
-        float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg -45;
-        transform.rotation = Quaternion.AngleAxis(angle+180, Vector3.forward);
-        Debug.Log("targetIndex: " + targetIndex[0] + " extralHealth: " + colliders[targetIndex[0]].gameObject.GetComponent<Character>().TempHealthPoint());
-        if (colliders[targetIndex[0]].gameObject.GetComponent<Character>().TempHealthPoint() - weaponData.AttackPower > 0)
-        {
-            isAttack = true; // ÉèÖÃÕıÔÚ¹¥»÷×´Ì¬
-            colliders[targetIndex[0]].gameObject.GetComponent<Character>().ReduceTempHealthPoint(weaponData.AttackPower);
-            GenerateBullet(angle); // Éú³É×Óµ¯
-        }
-        else
-        {
-            isAttack = true; // ÉèÖÃÕıÔÚ¹¥»÷×´Ì¬
-            GenerateBullet(angle); // Éú³É×Óµ¯
-            targetIndex[0]++;
-        }
-        //Éú³É×Óµ¯
-
+        
     }
+    //public void Attack(Collider[] colliders,int[] targetIndex)
+    //{
+    //    //ï¿½ï¿½×ªï¿½Ç¶ï¿½
+    //    if(isAttack) return; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½Ó·ï¿½ï¿½ï¿½
+    //    if (targetIndex[0]<colliders.Length) isHaveTarget = true;
+    //    else isHaveTarget = false;
+    //    if (!isHaveTarget) return; // ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ä¿ï¿½ê£¬Ö±ï¿½Ó·ï¿½ï¿½ï¿½
+    //    //ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½
+    //    var direction = colliders[targetIndex[0]].transform.position - transform.position;
+    //    float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg -45;
+    //    transform.rotation = Quaternion.AngleAxis(angle+180, Vector3.forward);
+    //    Debug.Log("targetIndex: " + targetIndex[0] + " extralHealth: " + colliders[targetIndex[0]].gameObject.GetComponent<Character>().TempHealthPoint());
+    //    if (colliders[targetIndex[0]].gameObject.GetComponent<Character>().TempHealthPoint() - weaponData.AttackPower > 0)
+    //    {
+    //        isAttack = true; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½×´Ì¬
+    //        colliders[targetIndex[0]].gameObject.GetComponent<Character>().ReduceTempHealthPoint(weaponData.AttackPower);
+    //        GenerateBullet(angle); // ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½
+    //    }
+    //    else
+    //    {
+    //        isAttack = true; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¹ï¿½ï¿½ï¿½×´Ì¬
+    //        GenerateBullet(angle); // ï¿½ï¿½ï¿½ï¿½ï¿½Óµï¿½
+    //        targetIndex[0]++;
+    //    }
+    //}
     private void OnDrawGizmos()
     {
-        Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, target.position);
+        Gizmos.color = Color.green;
+        //Quaternion rotation = Quaternion.AngleAxis(135, transform.forward);
+        Gizmos.DrawLine(transform.position,tempVector);
     }
-    public void GenerateBullet(float angle)
+    public Quaternion RotateWeapon(float3 curEnemyPosition)
+    {
+        var vectorToClosestEnemy = curEnemyPosition - new float3(transform.position.x, transform.position.y, 0);
+        tempVector = vectorToClosestEnemy;
+        var angleToCloasestEnemy = Mathf.Atan2(vectorToClosestEnemy.y, vectorToClosestEnemy.x)*Mathf.Rad2Deg;
+        var rotate = Quaternion.AngleAxis(angleToCloasestEnemy, Vector3.forward);
+        var rotate2 = Quaternion.AngleAxis(135, Vector3.forward);
+        var rotate3 = Quaternion.AngleAxis(180, Vector3.forward);
+        transform.rotation = rotate*rotate2;// 
+        return rotate3*rotate*rotate2;
+    }
+    public void GenerateBullet(Quaternion angle)
     {
         DynamicBuffer<BulletCreateInfo> buffer = World.DefaultGameObjectInjectionWorld.EntityManager.GetBuffer<BulletCreateInfo>(SharedData.singtonEntity.Data);
         buffer.Add(new BulletCreateInfo()
         {
             position = transform.position,
-            rotation = Quaternion.AngleAxis(angle, Vector3.forward)
+            rotation = angle
         });
+        isCold = true; //æ”»å‡»ç»“æŸè¿›å…¥å†·å´
     }
 }

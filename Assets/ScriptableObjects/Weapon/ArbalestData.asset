@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   weaponSprite: {fileID: 21300000, guid: 304d5538541a3c84d992c8f38b1bd9dc, type: 3}
   bulletData: {fileID: 11400000, guid: 8738f189c048ba2468e7543b5a839379, type: 2}
-  attackPower: 5
+  attackPower: 50
   attackSpeed: 1
   attackDistance: 5
   weaponType: 1
